@@ -44,7 +44,9 @@ jobs:
       # 6. 开始构建
       # 在 Build with Gradle 之前加入这一段
       - name: Sync Capacitor
-        run: npx cap sync android
+        run: |
+          chmod -R +x ./node_modules/.bin/
+          npx cap sync android
 
       - name: Build with Gradle
         run: cd android && ./gradlew assembleDebug --no-daemon --stacktrace
