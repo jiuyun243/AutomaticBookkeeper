@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+</button>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>极简记账 Pro - 进阶版</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="module" src="auto.js"></script>
+    <style>
+        /* 自动记账悬浮胶囊样式 */
+.auto-bill-capsule {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: linear-gradient(135deg, #07c160, #05a34e); /* 配合你的绿色主题 */
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    box-shadow: 0 4px 15px rgba(7, 193, 96, 0.4);
+    font-weight: bold;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.2s;
+}
+
+.auto-bill-capsule:active {
+    transform: scale(0.95);
+}
+
+/* 给图标加个简单的旋转动画 */
+.auto-bill-capsule span {
+    font-size: 20px;
+}
+        :root {
+            --primary-color: #4CAF50;
+            --danger-color: #ff5252;
+            --bg-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-main: #333;
+            --text-sub: #999;
+        }
+        body {
+            margin: 0; padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding-bottom: 90px;
+        }
+        .header-card {
+            background: linear-gradient(135deg, #4CAF50, #2E7D32);
+            color: white;
+            padding: 25px 20px 55px 20px;
+            border-bottom-left-radius: 25px;
+            border-bottom-right-radius: 25px;
+        }
+        .total-label { font-size: 14px; opacity: 0.9; display: flex; align-items: center; gap: 5px; }
+        .total-amount { font-size: 36px; font-weight: bold; margin-top: 5px; }
+
+        .overview-card {
+            background: white;
+            margin: -35px 15px 15px 15px;
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+            display: flex;
+            justify-content: space-between;
+            position: relative; z-index: 10;
+        }
+        .overview-item { text-align: center; flex: 1; }
+        .overview-item h4 { margin: 0; font-size: 11px; color: var(--text-sub); font-weight: normal; }
+        .overview-item p { margin: 4px 0 0 0; font-size: 16px; font-weight: bold; }
+        .overview-item.expense p { color: var(--danger-color); }
+        .divider { width: 1px; background: #eee; margin: 0 8px; }
+
+        /* 日期筛选栏 */
+        .filter-bar {
+            background: white;
+            margin: 0 15px 10px 15px;
+            border-radius: 12px;
+            padding: 12px 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .filter-bar label { font-size: 13px; color: var(--text-sub); font-weight: bold; }
+        .filter-bar input[type="date"] {
+            flex: 1; min-width: 120px;
+            padding: 8px 10px;
+            border: 1px solid #ddd; border-radius: 8px;
+            font-size: 13px; outline: none;
+        }
+        .filter-bar input[type="date"]:focus { border-color: var(--primary-color); }
+        .btn-filter-reset {
+            padding: 8px 14px; border: none; border-radius: 8px;
+            background: #eee; color: #666; font-size: 13px; cursor: pointer;
+        }
+        .btn-filter-reset:hover { background: #ddd; }
+
+        #chart-container {
+            width: 100%; height: 200px;
+            background: var(--card-bg);
+            margin-bottom: 10px;
+        }
+
+        .action-bar {
+            padding: 0 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .list-title { font-size: 15px; font-weight: bold; color: var(--text-main); }
+        .btn-export {
+            background: #e8f5e9; color: var(--primary-color);
+            border: none; padding: 6px 12px; border-radius: 20px;
+            font-size: 12px; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; gap: 5px;
+        }
+
+        .list-container { padding: 0 15px; }
+        .record-item {
+            background: var(--card-bg);
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            transition: transform 0.2s;
+        }
+        .record-item:active { transform: scale(0.98); }
+        .record-left { display: flex; align-items: center; gap: 10px; }
+        .icon-box {
+            width: 38px; height: 38px; border-radius: 50%;
+            background: #f0f0f0; display: flex; justify-content: center; align-items: center;
+            font-size: 16px; color: #666;
+        }
+        .record-info h4 { margin: 0 0 3px 0; font-size: 14px; }
+        .record-info p { margin: 0; font-size: 11px; color: var(--text-sub); }
+        .record-right { text-align: right; display: flex; align-items: center; gap: 8px; }
+        .record-amount { font-weight: bold; font-size: 15px; display: block; margin-bottom: 3px; }
+        .record-amount.expense { color: var(--text-main); }
+        .btn-delete {
+            background: none; border: none; color: #ddd; font-size: 15px; cursor: pointer; padding: 4px;
+        }
+        .btn-delete:hover { color: var(--danger-color); }
+
+        .fab {
+            position: fixed; bottom: 25px; right: 25px;
+            width: 58px; height: 58px;
+            background: linear-gradient(135deg, #4CAF50, #43A047);
+            border-radius: 50%;
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+            display: flex; justify-content: center; align-items: center;
+            color: white; font-size: 26px; cursor: pointer; z-index: 100;
+        }
+        .fab:active { transform: scale(0.9); }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 200;
+            justify-content: center; align-items: flex-end;
+            backdrop-filter: blur(3px);
+        }
+        .modal-content {
+            background: white; width: 100%;
+            border-top-left-radius: 25px; border-top-right-radius: 25px;
+            padding: 22px 18px 35px 18px; box-sizing: border-box;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            max-height: 90vh; overflow-y: auto;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; text-align: center; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; color: var(--text-sub); margin-bottom: 5px; }
+        input, select {
+            width: 100%; padding: 13px;
+            border: 1px solid #eee; background: #f9f9f9;
+            border-radius: 10px; box-sizing: border-box; font-size: 15px; outline: none;
+        }
+        input:focus, select:focus { border-color: var(--primary-color); background: white; }
+        .btn-save {
+            width: 100%; padding: 15px; background: var(--primary-color);
+            color: white; border: none; border-radius: 12px;
+            font-size: 16px; font-weight: bold; margin-top: 5px;
+        }
+        .btn-cancel {
+            width: 100%; padding: 14px; background: none;
+            color: var(--text-sub); border: none; font-size: 14px; cursor: pointer;
+        }
+
+        /* 导出选项面板 */
+        .export-panel {
+            margin: 0 15px 15px 15px;
+            border-radius: 12px;
+            padding: 15px;
+
+            display: none;
+        }
+        .export-panel.show { display: block; }
+        .export-panel h4 { margin: 0 0 12px 0; font-size: 14px; }
+        .export-panel .form-group { margin-bottom: 10px; }
+        .export-panel label { font-size: 13px !important; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; }
+        .checkbox-group label {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 13px; color: var(--text-main); cursor: pointer;
+            background: #f5f5f5; padding: 6px 12px; border-radius: 20px;
+        }
+        .checkbox-group input[type="checkbox"] { width: auto; margin: 0; padding: 0; }
+        .btn-do-export {
+            width: 100%; padding: 12px; background: var(--primary-color);
+            color: white; border: none; border-radius: 10px;
+            font-size: 14px; font-weight: bold; margin-top: 10px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-card">
+        <div class="total-label"><i class="fa-solid fa-wallet"></i> 当前区间总支出</div>
+        <div class="total-amount" id="total-display">¥ 0.00</div>
+    </div>
+
+    <div class="overview-card">
+        <div class="overview-item expense">
+            <h4>区间支出</h4>
+            <p id="today-expense">¥0</p>
+        </div>
+        <div class="divider"></div>
+        <div class="overview-item">
+            <h4>笔数</h4>
+            <p id="today-count">0</p>
+        </div>
+        <div class="divider"></div>
+        <div class="overview-item">
+            <h4>日均</h4>
+            <p id="daily-avg">¥0</p>
+        </div>
+    </div>
+
+    <!-- 日期筛选栏 -->
+    <div class="filter-bar">
+        <label>📅 从</label>
+        <input type="date" id="filter-start" />
+        <label>至</label>
+        <input type="date" id="filter-end" />
+        <button class="btn-filter-reset" onclick="resetFilter()">重置</button>
+    </div>
+
+    <div id="chart-container"></div>
+
+    <div class="action-bar">
+        <div class="list-title" id="list-title-text">区间明细</div>
+        <button class="btn-export" onclick="toggleExportPanel()">
+            <i class="fa-solid fa-file-excel"></i> 导出表格
+        </button>
+    </div>
+
+    <!-- 导出格式自定义面板 -->
+    <div class="export-panel" id="export-panel">
+        <h4><i class="fa-solid fa-sliders"></i> 自定义导出格式</h4>
+        <div class="form-group">
+            <label>文件名</label>
+            <input type="text" id="export-filename" placeholder="例如: 我的账单_2026年10月" value="账单明细" />
+        </div>
+        <div class="form-group">
+            <label>选择导出列</label>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="col-date" checked /> 日期</label>
+                <label><input type="checkbox" id="col-type" checked /> 类别</label>
+                <label><input type="checkbox" id="col-amount" checked /> 金额</label>
+                <label><input type="checkbox" id="col-remark" /> 备注</label>
+            </div>
+        </div>
+        <button class="btn-do-export" onclick="doExport()">
+            <i class="fa-solid fa-download"></i> 确认导出 Excel
+        </button>
+    </div>
+
+    <div class="list-container" id="record-list"></div>
+
+    <div class="fab" onclick="openModal()"><i class="fa-solid fa-plus"></i></div>
+
+    <!-- 添加账单弹窗 -->
+    <div class="modal" id="add-modal">
+        <div class="modal-content">
+            <div class="modal-title">记一笔</div>
+            <div class="form-group">
+                <label>金额</label>
+                <input type="number" id="input-amount" placeholder="例如: 25.5" inputmode="decimal" />
+            </div>
+            <div class="form-group">
+                <label>类别</label>
+                <select id="input-type">
+                    <option value="餐饮">🍔 餐饮美食</option>
+                    <option value="交通">🚌 交通出行</option>
+                    <option value="购物">🛍️ 日常购物</option>
+                    <option value="娱乐">🎮 休闲娱乐</option>
+                    <option value="居住">🏠 居住缴费</option>
+                    <option value="其他">📝 其他杂项</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>日期（不填默认今天）</label>
+                <input type="date" id="input-date" />
+            </div>
+            <div class="form-group">
+                <label>备注（选填）</label>
+                <input type="text" id="input-remark" placeholder="例如: 和同事聚餐" />
+            </div>
+            <button class="btn-save" onclick="saveRecord()">确认保存</button>
+            <button class="btn-cancel" onclick="closeModal()">取消</button>
+        </div>
+    </div>
+
+    <script>
+        let records = JSON.parse(localStorage.getItem('myAccountRecords')) || [];
+        
+        const iconMap = {
+            '餐饮': 'fa-utensils', '交通': 'fa-bus', '购物': 'fa-bag-shopping',
+            '娱乐': 'fa-gamepad', '居住': 'fa-house', '其他': 'fa-receipt'
+        };
+
+        // 初始化日期筛选器的默认值（本月）
+        function initFilterDates() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            document.getElementById('filter-start').value = formatDateISO(firstDay);
+            document.getElementById('filter-end').value = formatDateISO(today);
+        }
+
+        function formatDateISO(d) {
+            return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        }
+
+        function formatDateDisplay(d) {
+            const parts = d.split('-');
+            return parts[0] + '/' + parts[1] + '/' + parts[2];
+        }
+
+        window.onload = function() {
+            initFilterDates();
+            renderAll();
+        };
+
+        // 获取筛选后的数据
+        function getFilteredRecords() {
+            const startStr = document.getElementById('filter-start').value;
+            const endStr = document.getElementById('filter-end').value;
+            if (!startStr && !endStr) return records.slice();
+            
+            return records.filter(item => {
+                const itemDate = formatDateISO(new Date(item.date));
+                if (startStr && itemDate < startStr) return false;
+                if (endStr && itemDate > endStr) return false;
+                return true;
+            });
+        }
+
+        // 监听日期变化自动刷新
+        document.getElementById('filter-start').addEventListener('change', renderAll);
+        document.getElementById('filter-end').addEventListener('change', renderAll);
+
+        function renderAll() {
+            const filtered = getFilteredRecords();
+            renderList(filtered);
+            updateChart(filtered);
+            updateStats(filtered);
+        }
+
+        function updateStats(filtered) {
+            let total = 0;
+            filtered.forEach(item => total += parseFloat(item.amount));
+            
+            document.getElementById('total-display').innerText = '¥ ' + total.toFixed(2);
+            document.getElementById('today-expense').innerText = '¥' + total.toFixed(0);
+            document.getElementById('today-count').innerText = filtered.length;
+
+            // 计算日均
+            const startStr = document.getElementById('filter-start').value;
+            const endStr = document.getElementById('filter-end').value;
+            if (startStr && endStr) {
+                const days = Math.max(1, Math.round((new Date(endStr) - new Date(startStr)) / 86400000) + 1);
+                document.getElementById('daily-avg').innerText = '¥' + (total / days).toFixed(0);
+            } else {
+                document.getElementById('daily-avg').innerText = '¥0';
+            }
+
+            const startDisplay = startStr ? formatDateDisplay(startStr) : '最初';
+            const endDisplay = endStr ? formatDateDisplay(endStr) : '今天';
+            document.getElementById('list-title-text').innerText = startDisplay + ' ~ ' + endDisplay + ' 明细';
+        }
+
+        function renderList(filtered) {
+            const listEl = document.getElementById('record-list');
+            listEl.innerHTML = '';
+            if (filtered.length === 0) {
+                listEl.innerHTML = '<div style="text-align:center;color:#ccc;padding:40px 0;">该区间暂无数据</div>';
+                return;
+            }
+
+            filtered.slice().reverse().forEach((item, index) => {
+                const realIndex = records.indexOf(item);
+                const div = document.createElement('div');
+                div.className = 'record-item';
+                div.innerHTML = `
+                    <div class="record-left">
+                        <div class="icon-box"><i class="fa-solid ${iconMap[item.type] || 'fa-circle'}"></i></div>
+                        <div class="record-info">
+                            <h4>${item.type} ${item.remark ? '· ' + item.remark : ''}</h4>
+                            <p>${item.date}</p>
+                        </div>
+                    </div>
+                    <div class="record-right">
+                        <span class="record-amount expense">- ¥${parseFloat(item.amount).toFixed(2)}</span>
+                        <button class="btn-delete" onclick="deleteRecord(${realIndex})"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                `;
+                listEl.appendChild(div);
+            });
+        }
+
+        function updateChart(filtered) {
+            const chartDom = document.getElementById('chart-container');
+            const myChart = echarts.init(chartDom);
+            const typeData = {};
+            filtered.forEach(item => {
+                typeData[item.type] = (typeData[item.type] || 0) + parseFloat(item.amount);
+            });
+            const pieData = Object.keys(typeData).map(key => ({ value: typeData[key], name: key }));
+            const option = {
+                tooltip: { trigger: 'item' },
+                legend: { bottom: '0%', left: 'center', itemWidth: 10, itemHeight: 10, textStyle: {fontSize: 10} },
+                series: [{
+                    name: '支出构成', type: 'pie', radius: ['45%', '70%'],
+                    itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
+                    label: { show: false },
+                    data: pieData.length > 0 ? pieData : [{value: 1, name: '暂无数据', itemStyle:{color:'#eee'}}]
+                }]
+            };
+            myChart.setOption(option);
+        }
+
+        function openModal() {
+            document.getElementById('add-modal').style.display = 'flex';
+            document.getElementById('input-amount').value = '';
+            document.getElementById('input-date').value = formatDateISO(new Date());
+            document.getElementById('input-remark').value = '';
+            document.getElementById('input-amount').focus();
+        }
+        function closeModal() { document.getElementById('add-modal').style.display = 'none'; }
+
+        function saveRecord() {
+            const amount = document.getElementById('input-amount').value;
+            const type = document.getElementById('input-type').value;
+            const dateVal = document.getElementById('input-date').value;
+            const remark = document.getElementById('input-remark').value;
+            if (!amount) return alert('请输入金额');
+            
+            records.push({
+                id: Date.now(),
+                amount: amount,
+                type: type,
+                date: dateVal ? formatDateDisplay(dateVal) : new Date().toLocaleDateString(),
+                remark: remark || ''
+            });
+            localStorage.setItem('myAccountRecords', JSON.stringify(records));
+            renderAll();
+            closeModal();
+        }
+
+        function deleteRecord(index) {
+            if (confirm('确定要删除这条记录吗？')) {
+                records.splice(index, 1);
+                localStorage.setItem('myAccountRecords', JSON.stringify(records));
+                renderAll();
+            }
+        }
+
+        function resetFilter() {
+            initFilterDates();
+            renderAll();
+        }
+
+        // 导出面板
+        function toggleExportPanel() {
+            const panel = document.getElementById('export-panel');
+            panel.classList.toggle('show');
+        }
+
+        function doExport() {
+            const filtered = getFilteredRecords();
+            if (filtered.length === 0) return alert('当前区间没有数据可以导出！');
+
+            const filename = document.getElementById('export-filename').value.trim() || '账单明细';
+            const showDate = document.getElementById('col-date').checked;
+            const showType = document.getElementById('col-type').checked;
+            const showAmount = document.getElementById('col-amount').checked;
+            const showRemark = document.getElementById('col-remark').checked;
+
+            if (!showDate && !showType && !showAmount && !showRemark) {
+                return alert('请至少选择一列导出！');
+            }
+
+            const data = filtered.map(item => {
+                const row = {};
+                if (showDate) row["日期"] = item.date;
+                if (showType) row["类别"] = item.type;
+                if (showAmount) row["金额"] = parseFloat(item.amount);
+                if (showRemark) row["备注"] = item.remark || '';
+                return row;
+            });
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "账单明细");
+            XLSX.writeFile(wb, filename + ".xlsx");
+
+            document.getElementById('export-panel').classList.remove('show');
+            alert('导出成功！已保存为 ' + filename + '.xlsx');
+        }
+    </script>
+    <!-- 自动记账悬浮按钮 -->
+<button class="auto-bill-capsule" onclick="enableAutoBill(); setTimeout(startAutoBillService, 3000);">
+    <span>🤖</span> 开启自动记账
+</button>
+<!-- 1. 隐藏的颜色选择器 -->
+<input type="color" id="colorPicker" style="display:none;" value="#07c160">
+
+<!-- 2. 设置按钮（放在悬浮胶囊旁边或作为菜单项） -->
+<button class="auto-bill-capsule" id="settingsBtn" style="bottom: 90px; background: #333;">
+    🎨 设置主题色
+</button>
+
+<!-- 3. 原来的自动记账按钮（去掉内联样式，改用 ID 控制） -->
+<button class="auto-bill-capsule" id="autoBillBtn" onclick="enableAutoBill(); setTimeout(startAutoBillService, 3000);">
+    <span>🤖</span> 开启自动记账
+</button>
+</body>
+</html>
