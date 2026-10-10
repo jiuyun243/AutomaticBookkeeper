@@ -16,8 +16,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+        node-version: '22'  # 强制使用 Node 22
+        cache: 'npm'        # 启用缓存加速
 
+      - name: Install Dependencies
+        run: npm ci           # 推荐使用 ci 而非 install，更稳定
       # 2. 安装依赖
       - name: Install Dependencies
         run: npm install
@@ -45,8 +48,8 @@ jobs:
       # 在 Build with Gradle 之前加入这一段
       - name: Sync Capacitor
         run: |
-          chmod -R +x ./node_modules/.bin/
-          npx cap sync android
+         chmod -R +x ./node_modules/.bin/
+         npx cap sync android
 
       - name: Build with Gradle
         run: cd android && ./gradlew assembleDebug --no-daemon --stacktrace
