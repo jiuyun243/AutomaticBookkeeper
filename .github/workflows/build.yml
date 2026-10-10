@@ -22,11 +22,11 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      # 3. 设置 Java 17 (Capacitor 7+ 强制要求)
-      - name: Set up JDK 17
+      # 3. 设置 Java 21 (Capacitor 7+ 强制要求)
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: "17"
+          java-version: "21"
           distribution: "temurin"
 
       # 4. ⚠️ 关键修复：手动配置 Android SDK 环境变量
